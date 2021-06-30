@@ -14,8 +14,8 @@ class Point:
 
 @dataclass
 class SimulationResults:
-    Scan: np.ndarray
-    Result: np.ndarray
+    Scan: list[np.ndarray]
+    Result: list[np.ndarray]
 
 
 def to_image(img_array: np.ndarray) -> Image:

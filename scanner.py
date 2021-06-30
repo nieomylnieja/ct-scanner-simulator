@@ -22,13 +22,15 @@ class Scanner:
     def steps(self) -> int:
         return int(ceil(360 / self.step) + 1)
 
-    def run(self, scan: Scan) -> np.ndarray:
+    def run(self, scan: Scan) -> list[np.ndarray]:
         sinogram = self._create_sinogram(scan)
-        sinogram = self._convolve_sinogram(sinogram)
+        for i in range(len(sinogram)):
+            sinogram[i] = self._convolve_sinogram(sinogram[i])
         return sinogram
 
-    def _create_sinogram(self, scan: Scan) -> np.ndarray:
+    def _create_sinogram(self, scan: Scan) -> list[np.ndarray]:
         sinogram = np.empty(shape=(self.steps, scan.detectors_count))
+        steps: list[np.ndarray] = []
         for i in range(self.steps):
             alpha = i * self.step
             scan.emitter.update_position(self.radius, alpha, self.center)
@@ -41,15 +43,16 @@ class Scanner:
                     detector.pos.y))
                 brightness = [self.image.item(c[0] - 1, c[1] - 1) for c in coordinates]
                 sinogram[i][j] = mean(brightness)
-        return sinogram
+            steps.append(sinogram.copy())
+        return steps
 
     @staticmethod
     def _convolve_sinogram(sinogram: np.ndarray) -> np.ndarray:
         conv_square = np.zeros(shape=(5, 5))
-        for i in range(conv_square.shape[0]):
-            for j in range(conv_square.shape[1]):
-                if j == 0:
-                    conv_square[i][j] = 1
-                elif j % 2 != 0:
-                    conv_square[i][j] = (-4 / pi ** 2) / (j ** 2)
+        for j in range(conv_square.shape[0]):
+            for k in range(conv_square.shape[1]):
+                if k == 0:
+                    conv_square[j][k] = 1
+                elif k % 2 != 0:
+                    conv_square[j][k] = (-4 / pi ** 2) / (k ** 2)
         return signal.convolve2d(sinogram, conv_square, mode="full")

@@ -23,14 +23,16 @@ class Converter:
     def steps(self) -> int:
         return int(ceil(360 / self.step) + 1)
 
-    def run(self, sinogram: np.ndarray, scan: Scan) -> np.ndarray:
+    def run(self, sinogram: list[np.ndarray], scan: Scan) -> list[np.ndarray]:
+        s = sinogram[len(sinogram) - 1].copy()
         res = np.zeros(shape=(self.diameter, self.diameter))
+        steps: list[np.ndarray] = []
         for i in range(self.steps):
             alpha = i * self.step
             scan.emitter.update_position(self.radius, alpha, self.center)
             scan.update_detectors_positions(self.radius, alpha, self.center, self.span)
             for j, detector in enumerate(scan.detectors):
-                brightness = sinogram[i][j] / 255
+                brightness = s[i][j] / 255
                 coordinates = list(bresenham(
                     scan.emitter.pos.x,
                     scan.emitter.pos.y,
@@ -38,4 +40,5 @@ class Converter:
                     detector.pos.y))
                 for c in coordinates:
                     res[c[0] - 1][c[1] - 1] += brightness
-        return res
+            steps.append(res.copy())
+        return steps

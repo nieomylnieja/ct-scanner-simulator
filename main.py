@@ -1,5 +1,6 @@
 from pathlib import Path
 from os import listdir
+from time import sleep
 
 import numpy as np
 import streamlit as st
@@ -41,12 +42,16 @@ def run_app():
 
     if run_sim_was_pressed:
         if img is not None:
-            with st.spinner('Running the simulation...'):
+            with st.spinner("Running the simulation..."):
                 result = run_sim(img, span, step, detectors_count)
-            st.success('Done!')
+            st.success("Done!")
             scan_img, res_img = st.beta_columns(2)
-            scan_img.image(to_image(result.Scan), caption="Simulated CT scan")
-            res_img.image(to_image(result.Result), caption="Output image result")
+            scan_img = scan_img.image(to_image(result.Scan[0]), caption="Simulated CT scan")
+            res_img = res_img.image(to_image(result.Result[0]), caption="Output image result")
+            for s, r in zip(result.Scan, result.Result):
+                sleep(0.1)
+                scan_img.image(to_image(s), caption="Simulated CT scan")
+                res_img.image(to_image(r), caption="Output image result")
         else:
             st.error("please upload or select an image to run the simulation on")
 
