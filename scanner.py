@@ -11,40 +11,31 @@ from components import Scan
 
 class Scanner:
 
-    def __init__(self, image: np.ndarray, span: int, step: int):
+    def __init__(self, image: np.ndarray, span: int, n_steps: int, steps: int, scan: Scan):
         self.image: np.ndarray = image
         self.center: Point = Point(floor(image.shape[0] / 2), floor(image.shape[1] / 2))
         self.radius: float = floor(min(image.shape[0] / 2, image.shape[1] / 2))
         self.span: float = radians(span)
-        self.step: int = step
+        self.step: int = n_steps
+        self.scan = scan
+        self.sinogram = np.empty(shape=(steps, self.scan.detectors_count))
 
-    @property
-    def steps(self) -> int:
-        return int(ceil(360 / self.step) + 1)
+    def run(self, i: int) -> np.ndarray:
+        return self._create_sinogram(i)
 
-    def run(self, scan: Scan) -> list[np.ndarray]:
-        sinogram = self._create_sinogram(scan)
-        for i in range(len(sinogram)):
-            sinogram[i] = self._convolve_sinogram(sinogram[i])
-        return sinogram
-
-    def _create_sinogram(self, scan: Scan) -> list[np.ndarray]:
-        sinogram = np.empty(shape=(self.steps, scan.detectors_count))
-        steps: list[np.ndarray] = []
-        for i in range(self.steps):
-            alpha = i * self.step
-            scan.emitter.update_position(self.radius, alpha, self.center)
-            scan.update_detectors_positions(self.radius, alpha, self.center, self.span)
-            for j, detector in enumerate(scan.detectors):
-                coordinates = list(bresenham(
-                    scan.emitter.pos.x,
-                    scan.emitter.pos.y,
-                    detector.pos.x,
-                    detector.pos.y))
-                brightness = [self.image.item(c[0] - 1, c[1] - 1) for c in coordinates]
-                sinogram[i][j] = mean(brightness)
-            steps.append(sinogram.copy())
-        return steps
+    def _create_sinogram(self, i: int) -> np.ndarray:
+        alpha = i * self.step
+        self.scan.emitter.update_position(self.radius, alpha, self.center)
+        self.scan.update_detectors_positions(self.radius, alpha, self.center, self.span)
+        for j, detector in enumerate(self.scan.detectors):
+            coordinates = list(bresenham(
+                self.scan.emitter.pos.x,
+                self.scan.emitter.pos.y,
+                detector.pos.x,
+                detector.pos.y))
+            brightness = [self.image.item(c[0] - 1, c[1] - 1) for c in coordinates]
+            self.sinogram[i][j] = mean(brightness)
+        return self._convolve_sinogram(self.sinogram.copy())
 
     @staticmethod
     def _convolve_sinogram(sinogram: np.ndarray) -> np.ndarray:

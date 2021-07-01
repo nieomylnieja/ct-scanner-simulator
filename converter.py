@@ -9,36 +9,30 @@ from commons import Point
 
 class Converter:
 
-    def __init__(self, step: int, span: float, radius: float):
+    def __init__(self, step: int, span: float, radius: float, scan: Scan, sinogram: np.ndarray):
         self.radius: float = radius
         self.span: float = radians(span)
         self.step: int = step
         self.center: Point = Point(int(self.radius), int(self.radius))
+        self.scan = scan
+        self.res = np.zeros(shape=(self.diameter, self.diameter))
+        self.sinogram = sinogram.copy()
 
     @property
     def diameter(self) -> float:
         return self.radius * 2
 
-    @property
-    def steps(self) -> int:
-        return int(ceil(360 / self.step) + 1)
-
-    def run(self, sinogram: list[np.ndarray], scan: Scan) -> list[np.ndarray]:
-        s = sinogram[len(sinogram) - 1].copy()
-        res = np.zeros(shape=(self.diameter, self.diameter))
-        steps: list[np.ndarray] = []
-        for i in range(self.steps):
-            alpha = i * self.step
-            scan.emitter.update_position(self.radius, alpha, self.center)
-            scan.update_detectors_positions(self.radius, alpha, self.center, self.span)
-            for j, detector in enumerate(scan.detectors):
-                brightness = s[i][j] / 255
-                coordinates = list(bresenham(
-                    scan.emitter.pos.x,
-                    scan.emitter.pos.y,
-                    detector.pos.x,
-                    detector.pos.y))
-                for c in coordinates:
-                    res[c[0] - 1][c[1] - 1] += brightness
-            steps.append(res.copy())
-        return steps
+    def run(self, i: int) -> np.ndarray:
+        alpha = i * self.step
+        self.scan.emitter.update_position(self.radius, alpha, self.center)
+        self.scan.update_detectors_positions(self.radius, alpha, self.center, self.span)
+        for j, detector in enumerate(self.scan.detectors):
+            brightness = self.sinogram[i][j] / 255
+            coordinates = list(bresenham(
+                self.scan.emitter.pos.x,
+                self.scan.emitter.pos.y,
+                detector.pos.x,
+                detector.pos.y))
+            for c in coordinates:
+                self.res[c[0] - 1][c[1] - 1] += brightness
+        return self.res.copy()
